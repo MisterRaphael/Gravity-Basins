@@ -1,7 +1,5 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "raylib.h"
 #include <stdbool.h>
 
 #include "calculus.h"
@@ -19,7 +17,7 @@ double calculate_kinetic_energy(double vx, double vy) {
 int captured(ObjectInfo *object_info, Planet *planets){
     double kinetic_energy = calculate_kinetic_energy(object_info->x_velocity, object_info->y_velocity);
     for (int i = 0; i < number_of_planets; i++) {
-        if (kinetic_energy <= CAPTURATION_TOLERANCE_KINETIC_ENERGY && abs(object_info->x_position - planets[i].x_position) <= CAPTURATION_TOLERANCE_POSITION_DIFFERENCE && abs(object_info->y_position - planets[i].y_position) <= CAPTURATION_TOLERANCE_POSITION_DIFFERENCE )  {
+        if (kinetic_energy <= CAPTURATION_TOLERANCE_KINETIC_ENERGY && fabs(object_info->x_position - planets[i].x_position) <= CAPTURATION_TOLERANCE_POSITION_DIFFERENCE && fabs(object_info->y_position - planets[i].y_position) <= CAPTURATION_TOLERANCE_POSITION_DIFFERENCE )  {
             //DrawText(TextFormat("captured by %d", i), 160, 150, 20, WHITE);
             return planets[i].id;
         }

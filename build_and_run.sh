@@ -1,17 +1,14 @@
 #!/bin/bash
-cd /home/raph/CLionProjects/untitled1/cmake-build-debug
-echo "=== Building project ==="
-cmake .. 2>&1
-if [ $? -eq 0 ]; then
-    echo "=== Compiling ==="
-    make -j 2>&1
-    if [ $? -eq 0 ]; then
-        echo "=== Build successful ==="
-        echo "=== Running binary (5s timeout) ==="
-        timeout 5 ./Gravity_Basins 2>&1 | head -30
-    else
-        echo "=== Compilation failed ==="
-    fi
-else
-    echo "=== CMake configuration failed ==="
-fi
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUILD_DIR="${SCRIPT_DIR}/cmake-build-debug"
+
+echo "=== Configuration du projet avec CMake ==="
+cmake -B "${BUILD_DIR}" -S "${SCRIPT_DIR}"
+
+echo "=== Compilation ==="
+cmake --build "${BUILD_DIR}" -j"$(nproc)"
+
+echo "=== Lancement de Gravity Basins ==="
+"${BUILD_DIR}/Gravity_Basins" "$@"

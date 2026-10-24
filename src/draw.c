@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include "raylib.h"
 #include <math.h>
+#include "raylib.h"
 
 #include "constants.h"
 #include "draw.h"
@@ -24,7 +24,8 @@ void draw_main(void) {
 
     init_object((double)next_x, (double)next_y);
 
-    init_planet();
+    init_random_planet();
+    
     bool simulation_complete = false;
     int pixel_count = 0;  // compteur pour TEXTURE_UPDATE_STEPS
 

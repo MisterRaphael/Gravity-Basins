@@ -7,14 +7,16 @@ set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -ffast-math -march=native")
 
 set(SRC_FILES
-        main.c
-        window.c
-        draw.c
-        calculus.c
-        corpus_creation.c
+        src/main.c
+        src/window.c
+        src/draw.c
+        src/calculus.c
+        src/corpus_creation.c
+        src/config.c
 )
 
 add_executable(Gravity_Basins ${SRC_FILES})
+target_include_directories(Gravity_Basins PRIVATE include)
 
 # Raylib
 # Raylib (téléchargement et compilation automatiques)

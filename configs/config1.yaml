@@ -1,0 +1,7 @@
+# Exemple de configuration au format YAML
+planets: 3
+gravity: 100000.0
+friction: 0.1
+sub_steps: 1000
+sim_steps: 5000
+

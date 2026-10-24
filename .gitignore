@@ -36,12 +36,10 @@ Gravity_Basins
 cmake-build-*/
 build/
 
-# JetBrains / CLion
+# IDE configurations
 .idea/
+.vscode/
 *.iml
-
-# Sub-repositories / temporary test folders
-222/
 
 # OS generated files
 .DS_Store
