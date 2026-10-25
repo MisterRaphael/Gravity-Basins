@@ -7,6 +7,7 @@
 #include "draw.h"
 #include "calculus.h"
 #include "corpus_creation.h"
+#include "gpu_simulation.h"
 
 static void update_texture_when_needed(Texture2D texture, Image image, int *pixel_count) {
     if (*pixel_count >= TEXTURE_UPDATE_STEPS) {
@@ -78,7 +79,38 @@ static void draw_scene(Texture2D pixel_texture, bool simulation_complete) {
     EndDrawing();
 }
 
+static void draw_gpu_scene(GpuSimulation *simulation) {
+    gpu_simulation_step(simulation);
+
+    BeginDrawing();
+    ClearBackground(BLACK);
+    gpu_simulation_draw(simulation);
+
+    for (int i = 0; i < number_of_planets; i++) {
+        draw_planet(&planets[i]);
+    }
+
+    DrawText("GPU simulation", 10, 10, 20, WHITE);
+    DrawFPS(10, 40);
+    EndDrawing();
+}
+
 void draw_main(void) {
+    init_random_planet();
+
+    GpuSimulation *gpu_simulation =
+            gpu_simulation_create(planets, number_of_planets);
+    if (gpu_simulation != NULL) {
+        while (!WindowShouldClose()) {
+            draw_gpu_scene(gpu_simulation);
+        }
+
+        gpu_simulation_destroy(gpu_simulation);
+        cleanup_corpus();
+        return;
+    }
+
+    // CPU fallback for systems without OpenGL 4.3 compute shader support.
     // L'image conserve les pixels déjà calculés entre les frames.
     Image pixel_image = GenImageColor(WINDOW_WIDTH, WINDOW_HEIGHT, BLACK);
     Texture2D pixel_texture = LoadTextureFromImage(pixel_image);
@@ -86,7 +118,6 @@ void draw_main(void) {
     int pixel_x = 0;
     int pixel_y = 0;
     init_object((double)pixel_x, (double)pixel_y);
-    init_random_planet();
 
     bool simulation_complete = false;
     int pixel_count = 0;

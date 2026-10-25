@@ -34,5 +34,6 @@
 // Simulation par frame & Texture
 #define SIM_STEPS_PER_FRAME                       (g_config.sim_steps_per_frame)
 #define TEXTURE_UPDATE_STEPS                      (g_config.texture_update_steps)
+#define GPU_STEPS_PER_DISPATCH                    (g_config.gpu_steps_per_dispatch)
 
 #endif //UTIPE_CONSTANTS_H

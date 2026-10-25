@@ -28,6 +28,7 @@ typedef struct {
     int sub_steps;
     int sim_steps_per_frame;
     int texture_update_steps;
+    int gpu_steps_per_dispatch;
 } Config;
 
 // Instance globale accessible partout
