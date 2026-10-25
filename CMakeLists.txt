@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.20) # Version plus standard
 project(Gravity_Basins C)
 
 set(CMAKE_C_STANDARD 23)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Optimisations pour la performance pure
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -ffast-math -march=native")

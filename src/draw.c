@@ -1,98 +1,107 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <stdbool.h>
 #include <math.h>
 #include "raylib.h"
 
 #include "constants.h"
 #include "draw.h"
-
-
 #include "calculus.h"
 #include "corpus_creation.h"
 
-void draw_main(void) {
+static void update_texture_when_needed(Texture2D texture, Image image, int *pixel_count) {
+    if (*pixel_count >= TEXTURE_UPDATE_STEPS) {
+        UpdateTexture(texture, image.data);
+        *pixel_count = 0;
+    }
+}
 
-    //initialisation
-    Image pixel_image = GenImageColor(WINDOW_WIDTH, WINDOW_HEIGHT, BLACK);
-
-    Texture2D pixel_texture = LoadTextureFromImage(pixel_image);
-
-    int next_x = 0;
-    int next_y = 0;
-
-    init_object((double)next_x, (double)next_y);
-
-    init_random_planet();
-    
-    bool simulation_complete = false;
-    int pixel_count = 0;  // compteur pour TEXTURE_UPDATE_STEPS
-
-
-    while (!WindowShouldClose()) {
-        // Simulation : plusieurs itérations de physique par frame de rendu
-        if (!simulation_complete) {
-            for (int sim = 0; sim < SIM_STEPS_PER_FRAME; sim++) {
-                future_position(&objects[0], planets);
-
-                int c = captured(&objects[0], planets);
-                if (c != -1) {
-                    // Marquer le pixel de couleur à la position de départ de l'objet (next_x, next_y)
-                    ImageDrawPixel(&pixel_image, next_x, next_y, planets[c].color);
-                    pixel_count++;
-                    if (pixel_count >= TEXTURE_UPDATE_STEPS) {
-                        UpdateTexture(pixel_texture, pixel_image.data);
-                        pixel_count = 0;
-                    }
-
-                    // Faire disparaître l'objet capturé en le repositionnant à droite
-                    next_x++;
-                    if (next_x >= WINDOW_WIDTH) {
-                        // Ligne terminée, passer à la ligne suivante
-                        next_x = 0;
-                        next_y++;
-                    }
-                    if (next_y >= WINDOW_HEIGHT) {
-                        // Toute la map est colorée, fin de simulation
-                        simulation_complete = true;
-                        break;
-                    }
-                    else {
-                        // Faire apparaître un nouvel objet à la position suivante
-                        objects[0].x_position = (double)next_x;
-                        objects[0].y_position = (double)next_y;
-                        objects[0].x_velocity = 0.0;
-                        objects[0].y_velocity = 0.0;
-                    }
-                }
-            }
-        }
-
-        // Rendu : une seule fois par frame
-        BeginDrawing();
-        ClearBackground(BLACK);
-
-        // Afficher la texture des pixels colorés en premier (en arrière-plan)
-        DrawTexture(pixel_texture, 0, 0, WHITE);
-
-        for (int i = 0; i < number_of_planets; i++) {
-            draw_planet(&planets[i]);
-        }
-
-        if (!simulation_complete) {
-            draw_object(&objects[0]);
-        }
-
-        if (simulation_complete) {
-            DrawText("Simulation complete", 160, 150, 20, WHITE);
-        }
-
-        DrawFPS(10, 40);
-        EndDrawing();
+static bool advance_to_next_pixel(int *pixel_x, int *pixel_y) {
+    (*pixel_x)++;
+    if (*pixel_x >= WINDOW_WIDTH) {
+        *pixel_x = 0;
+        (*pixel_y)++;
     }
 
-    // Mettre à jour la texture une dernière fois pour afficher les pixels restants
+    return *pixel_y >= WINDOW_HEIGHT;
+}
+
+static bool process_capture(int captured_planet, int *pixel_x, int *pixel_y,
+                            Image pixel_image, Texture2D pixel_texture,
+                            int *pixel_count) {
+    ImageDrawPixel(&pixel_image, *pixel_x, *pixel_y, planets[captured_planet].color);
+    (*pixel_count)++;
+    update_texture_when_needed(pixel_texture, pixel_image, pixel_count);
+
+    if (advance_to_next_pixel(pixel_x, pixel_y)) {
+        return true;
+    }
+
+    objects[0].x_position = (double)*pixel_x;
+    objects[0].y_position = (double)*pixel_y;
+    objects[0].x_velocity = 0.0;
+    objects[0].y_velocity = 0.0;
+    return false;
+}
+
+static bool simulate_frame(int *pixel_x, int *pixel_y, Image pixel_image,
+                           Texture2D pixel_texture, int *pixel_count) {
+    for (int step = 0; step < SIM_STEPS_PER_FRAME; step++) {
+        future_position(&objects[0], planets);
+
+        int captured_planet = captured(&objects[0], planets);
+        if (captured_planet != -1 &&
+            process_capture(captured_planet, pixel_x, pixel_y,
+                            pixel_image, pixel_texture, pixel_count)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static void draw_scene(Texture2D pixel_texture, bool simulation_complete) {
+    BeginDrawing();
+    ClearBackground(BLACK);
+    DrawTexture(pixel_texture, 0, 0, WHITE);
+
+    for (int i = 0; i < number_of_planets; i++) {
+        draw_planet(&planets[i]);
+    }
+
+    if (simulation_complete) {
+        DrawText("Simulation complete", 160, 150, 20, WHITE);
+    } else {
+        draw_object(&objects[0]);
+    }
+
+    DrawFPS(10, 40);
+    EndDrawing();
+}
+
+void draw_main(void) {
+    // L'image conserve les pixels déjà calculés entre les frames.
+    Image pixel_image = GenImageColor(WINDOW_WIDTH, WINDOW_HEIGHT, BLACK);
+    Texture2D pixel_texture = LoadTextureFromImage(pixel_image);
+
+    int pixel_x = 0;
+    int pixel_y = 0;
+    init_object((double)pixel_x, (double)pixel_y);
+    init_random_planet();
+
+    bool simulation_complete = false;
+    int pixel_count = 0;
+
+    while (!WindowShouldClose()) {
+        if (!simulation_complete) {
+            simulation_complete = simulate_frame(&pixel_x, &pixel_y,
+                                                 pixel_image, pixel_texture,
+                                                 &pixel_count);
+        }
+
+        draw_scene(pixel_texture, simulation_complete);
+    }
+
+    // Envoyer les derniers pixels calculés à la texture.
     if (pixel_count > 0) {
         UpdateTexture(pixel_texture, pixel_image.data);
     }
@@ -100,8 +109,8 @@ void draw_main(void) {
     cleanup_corpus();
     UnloadImage(pixel_image);
     UnloadTexture(pixel_texture);
-
 }
+
 
 void draw_planet(Planet *planet) {
     if (planet == NULL) {

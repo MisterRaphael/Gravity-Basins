@@ -35,6 +35,7 @@ Gravity_Basins
 # CMake build directories
 cmake-build-*/
 build/
+compile_commands.json
 
 # IDE configurations
 .idea/
