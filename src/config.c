@@ -53,18 +53,13 @@ static double eval_variable(const Config *cfg, const char *var, bool *ok) {
     if (ci_strcmp(var, "WINDOW_HEIGHT") == 0 || ci_strcmp(var, "height") == 0) return (double)cfg->window_height;
     if (ci_strcmp(var, "FPS") == 0) return (double)cfg->fps;
     if (ci_strcmp(var, "NUMBER_OF_PLANETS") == 0 || ci_strcmp(var, "planets") == 0) return (double)cfg->number_of_planets;
-    if (ci_strcmp(var, "NUMBER_OF_OBJECTS") == 0 || ci_strcmp(var, "objects") == 0) return (double)cfg->number_of_objects;
     if (ci_strcmp(var, "RADIUS_PLANET") == 0) return cfg->radius_planet;
-    if (ci_strcmp(var, "RADIUS_OBJECT") == 0) return cfg->radius_object;
     if (ci_strcmp(var, "G") == 0 || ci_strcmp(var, "gravity") == 0) return cfg->g;
     if (ci_strcmp(var, "FRICTION_COEFF") == 0 || ci_strcmp(var, "friction") == 0 || ci_strcmp(var, "f") == 0) return cfg->friction_coeff;
     if (ci_strcmp(var, "RANDOM_PLANETS") == 0 || ci_strcmp(var, "random_planets") == 0) return cfg->random_planets ? 1.0 : 0.0;
-    if (ci_strcmp(var, "SUB_STEPS") == 0 || ci_strcmp(var, "sub_steps") == 0) return (double)cfg->sub_steps;
     if (ci_strcmp(var, "SOFTENING_SQ") == 0 || ci_strcmp(var, "softening") == 0) return cfg->softening_sq;
     if (ci_strcmp(var, "CAPTURATION_TOLERANCE_KINETIC_ENERGY") == 0) return cfg->capturation_tolerance_kinetic_energy;
     if (ci_strcmp(var, "CAPTURATION_TOLERANCE_POSITION_DIFFERENCE") == 0) return cfg->capturation_tolerance_position_difference;
-    if (ci_strcmp(var, "SIM_STEPS_PER_FRAME") == 0 || ci_strcmp(var, "sim_steps") == 0) return (double)cfg->sim_steps_per_frame;
-    if (ci_strcmp(var, "TEXTURE_UPDATE_STEPS") == 0 || ci_strcmp(var, "texture_steps") == 0) return (double)cfg->texture_update_steps;
     if (ci_strcmp(var, "GPU_STEPS_PER_DISPATCH") == 0 || ci_strcmp(var, "gpu_steps") == 0) return (double)cfg->gpu_steps_per_dispatch;
 
     *ok = false;
@@ -212,10 +207,8 @@ void config_init_defaults(Config *cfg) {
     cfg->window_height = (cfg->window_width * 9) / 16;
     cfg->fps = 60;
 
-    cfg->number_of_objects = 1;
     cfg->number_of_planets = 3;
     cfg->random_planets = true;
-    cfg->radius_object = (double)cfg->window_height / 85.0;
     cfg->radius_planet = (double)cfg->window_width / 70.0;
 
     cfg->g = 100000.0;
@@ -225,9 +218,6 @@ void config_init_defaults(Config *cfg) {
     cfg->capturation_tolerance_kinetic_energy = 150.0;
     cfg->capturation_tolerance_position_difference = 30.0;
 
-    cfg->sub_steps = 1000;
-    cfg->sim_steps_per_frame = 5000;
-    cfg->texture_update_steps = cfg->window_width;
     cfg->gpu_steps_per_dispatch = 16;
 }
 
@@ -237,11 +227,8 @@ static void apply_key_value(Config *cfg, const char *key, const char *val) {
         // Si la hauteur n'a pas été explicitement fixée, ajuster le ratio 16:9
         cfg->window_height = (cfg->window_width * 9) / 16;
         cfg->radius_planet = (double)cfg->window_width / 70.0;
-        cfg->radius_object = (double)cfg->window_height / 85.0;
-        cfg->texture_update_steps = cfg->window_width;
     } else if (ci_strcmp(key, "WINDOW_HEIGHT") == 0 || ci_strcmp(key, "height") == 0) {
         cfg->window_height = (int)parse_config_value(cfg, val, cfg->window_height);
-        cfg->radius_object = (double)cfg->window_height / 85.0;
     } else if (ci_strcmp(key, "FPS") == 0) {
         cfg->fps = (int)parse_config_value(cfg, val, cfg->fps);
     } else if (ci_strcmp(key, "NUMBER_OF_PLANETS") == 0 || ci_strcmp(key, "planets") == 0) {
@@ -254,18 +241,12 @@ static void apply_key_value(Config *cfg, const char *key, const char *val) {
         } else {
             cfg->random_planets = (parse_config_value(cfg, val, 1.0) != 0.0);
         }
-    } else if (ci_strcmp(key, "NUMBER_OF_OBJECTS") == 0 || ci_strcmp(key, "objects") == 0) {
-        cfg->number_of_objects = (int)parse_config_value(cfg, val, cfg->number_of_objects);
     } else if (ci_strcmp(key, "RADIUS_PLANET") == 0) {
         cfg->radius_planet = parse_config_value(cfg, val, cfg->radius_planet);
-    } else if (ci_strcmp(key, "RADIUS_OBJECT") == 0) {
-        cfg->radius_object = parse_config_value(cfg, val, cfg->radius_object);
     } else if (ci_strcmp(key, "G") == 0 || ci_strcmp(key, "gravity") == 0) {
         cfg->g = parse_config_value(cfg, val, cfg->g);
     } else if (ci_strcmp(key, "FRICTION_COEFF") == 0 || ci_strcmp(key, "friction") == 0 || ci_strcmp(key, "f") == 0) {
         cfg->friction_coeff = parse_config_value(cfg, val, cfg->friction_coeff);
-    } else if (ci_strcmp(key, "SUB_STEPS") == 0 || ci_strcmp(key, "sub_steps") == 0) {
-        cfg->sub_steps = (int)parse_config_value(cfg, val, cfg->sub_steps);
     } else if (ci_strcmp(key, "SOFTENING_SQ") == 0 || ci_strcmp(key, "softening") == 0) {
         cfg->softening_sq = parse_config_value(cfg, val, cfg->softening_sq);
     } else if (ci_strcmp(key, "CAPTURATION_TOLERANCE_KINETIC_ENERGY") == 0 ||
@@ -274,10 +255,6 @@ static void apply_key_value(Config *cfg, const char *key, const char *val) {
     } else if (ci_strcmp(key, "CAPTURATION_TOLERANCE_POSITION_DIFFERENCE") == 0 ||
                ci_strcmp(key, "capture_pos") == 0 || ci_strcmp(key, "capture_position") == 0) {
         cfg->capturation_tolerance_position_difference = parse_config_value(cfg, val, cfg->capturation_tolerance_position_difference);
-    } else if (ci_strcmp(key, "SIM_STEPS_PER_FRAME") == 0 || ci_strcmp(key, "sim_steps") == 0) {
-        cfg->sim_steps_per_frame = (int)parse_config_value(cfg, val, cfg->sim_steps_per_frame);
-    } else if (ci_strcmp(key, "TEXTURE_UPDATE_STEPS") == 0 || ci_strcmp(key, "texture_steps") == 0) {
-        cfg->texture_update_steps = (int)parse_config_value(cfg, val, cfg->texture_update_steps);
     } else if (ci_strcmp(key, "GPU_STEPS_PER_DISPATCH") == 0 || ci_strcmp(key, "gpu_steps") == 0) {
         cfg->gpu_steps_per_dispatch = (int)parse_config_value(cfg, val, cfg->gpu_steps_per_dispatch);
     } else {
@@ -342,8 +319,6 @@ static void print_usage(const char *prog_name) {
     printf("  -p, --planets <nombre>     Nombre de planètes (défaut: 3)\n");
     printf("  --random                   Place les planètes aléatoirement (défaut: activé)\n");
     printf("  --no-random                Place les planètes de manière régulière sur un cercle\n");
-    printf("  -s, --sub-steps <nombre>   Sous-pas de physique par calcul (défaut: 1000)\n");
-    printf("  -m, --sim-steps <nombre>   Itérations de physique par frame (défaut: 5000)\n");
     printf("  -u, --gpu-steps <nombre>   Sous-pas GPU par frame (défaut: 16)\n");
     printf("  -w, --width <pixels>       Largeur de la fenêtre (défaut: 1700)\n\n");
     printf("Exemples:\n");
@@ -371,18 +346,12 @@ bool config_parse_cli(Config *cfg, int argc, char **argv) {
             cfg->random_planets = true;
         } else if (strcmp(argv[i], "--no-random") == 0) {
             cfg->random_planets = false;
-        } else if ((strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--sub-steps") == 0) && i + 1 < argc) {
-            cfg->sub_steps = atoi(argv[++i]);
-        } else if ((strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--sim-steps") == 0) && i + 1 < argc) {
-            cfg->sim_steps_per_frame = atoi(argv[++i]);
         } else if ((strcmp(argv[i], "-u") == 0 || strcmp(argv[i], "--gpu-steps") == 0) && i + 1 < argc) {
             cfg->gpu_steps_per_dispatch = atoi(argv[++i]);
         } else if ((strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "--width") == 0) && i + 1 < argc) {
             cfg->window_width = atoi(argv[++i]);
             cfg->window_height = (cfg->window_width * 9) / 16;
             cfg->radius_planet = (double)cfg->window_width / 70.0;
-            cfg->radius_object = (double)cfg->window_height / 85.0;
-            cfg->texture_update_steps = cfg->window_width;
         } else if (argv[i][0] != '-') {
             // Argument positionnel : fichier de configuration
             config_load_from_file(cfg, argv[i]);
@@ -401,15 +370,11 @@ void config_print(const Config *cfg) {
     printf("  Fenêtre           : %d x %d (%d FPS)\n", cfg->window_width, cfg->window_height, cfg->fps);
     printf("  Planètes          : %d (rayon: %.1f px, aléatoires: %s)\n",
            cfg->number_of_planets, cfg->radius_planet, cfg->random_planets ? "oui" : "non");
-    printf("  Objets            : %d (rayon: %.1f px)\n", cfg->number_of_objects, cfg->radius_object);
     printf("  Constante G       : %.1f\n", cfg->g);
     printf("  Frottement        : %.4f\n", cfg->friction_coeff);
     printf("  Softening Sq      : %.1f\n", cfg->softening_sq);
     printf("  Capture KE tol    : %.1f J\n", cfg->capturation_tolerance_kinetic_energy);
     printf("  Capture Pos tol   : %.1f px\n", cfg->capturation_tolerance_position_difference);
-    printf("  Sub-steps         : %d\n", cfg->sub_steps);
-    printf("  Sim-steps / frame : %d\n", cfg->sim_steps_per_frame);
-    printf("  Texture update    : tous les %d pixels\n", cfg->texture_update_steps);
     printf("  Sous-pas GPU      : %d par dispatch\n", cfg->gpu_steps_per_dispatch);
     printf("==============================================================\n\n");
 }

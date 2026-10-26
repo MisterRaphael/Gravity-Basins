@@ -5,6 +5,5 @@
 
 void draw_main(void);
 void draw_planet(Planet *planet);
-void draw_object(ObjectInfo *object);
 
 #endif //UTIPE_DRAW_H

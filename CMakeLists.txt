@@ -15,7 +15,6 @@ set(SRC_FILES
         src/window.c
         src/draw.c
         src/gpu_simulation.c
-        src/calculus.c
         src/corpus_creation.c
         src/config.c
 )

@@ -20,7 +20,7 @@ typedef struct {
     float x;
     float y;
     float unused_z;
-    float unused_w;
+    float unused_w; //16 octets sont requis pour que le tampon de stockage de shader fonctionne correctement
 } GpuPlanetPosition;
 
 typedef struct {
@@ -31,7 +31,7 @@ typedef struct {
     uint32_t state;
     uint32_t color;
     uint32_t reserved0;
-    uint32_t reserved1;
+    uint32_t reserved1; // 32 octets sont requis pour que le tampon de stockage de shader fonctionne correctement
 } GpuParticle;
 
 typedef void (*MemoryBarrierFunction)(unsigned int barriers);
@@ -62,7 +62,7 @@ static uint32_t pack_color(Color color) {
            ((uint32_t)color.a << 24u);
 }
 
-static void set_compute_uniforms(GpuSimulation *simulation) {
+static void set_compute_uniforms(GpuSimulation *simulation) { //envoie les paramètres de simulation au shader de calcul
     const int width = simulation->width;
     const int height = simulation->height;
     const int planet_count = simulation->planet_count;
@@ -110,9 +110,10 @@ static void destroy_buffers(GpuSimulation *simulation) {
     }
 }
 
-GpuSimulation *gpu_simulation_create(const Planet *planet_list, int planet_count) {
+GpuSimulation *gpu_simulation_create(const Planet *planet_list, int planet_count) {//crée une simulation GPU et alloue les ressources nécessaires
+    // Vérifie la compatibilité OpenGL et les paramètres de simulation
     if (rlGetVersion() != RL_OPENGL_43) {
-        fprintf(stderr, "gpu: OpenGL 4.3 is unavailable; using the CPU simulation\n");
+        fprintf(stderr, "gpu: OpenGL 4.3 is unavailable; GPU simulation cannot start\n");
         return NULL;
     }
     if (planet_list == NULL || planet_count <= 0 || WINDOW_WIDTH <= 0 || WINDOW_HEIGHT <= 0) {
@@ -128,6 +129,8 @@ GpuSimulation *gpu_simulation_create(const Planet *planet_list, int planet_count
         fprintf(stderr, "gpu: simulation buffers are too large\n");
         return NULL;
     }
+
+    //allocation de la mémoire pour la simulation, les particules, les positions des planètes et les couleurs
 
     GpuSimulation *simulation = calloc(1, sizeof(*simulation));
     GpuParticle *particles = calloc(particle_count, sizeof(*particles));
@@ -181,7 +184,7 @@ GpuSimulation *gpu_simulation_create(const Planet *planet_list, int planet_count
 
     if (simulation->compute_shader == 0 || simulation->compute_program == 0 ||
         simulation->render_shader.id == 0 || simulation->memory_barrier == NULL) {
-        fprintf(stderr, "gpu: shader compilation failed; using the CPU simulation\n");
+        fprintf(stderr, "gpu: shader compilation failed; GPU simulation cannot start\n");
         if (simulation->render_shader.id != 0) {
             UnloadShader(simulation->render_shader);
         }
@@ -210,7 +213,7 @@ GpuSimulation *gpu_simulation_create(const Planet *planet_list, int planet_count
 
     if (simulation->planet_positions_buffer == 0 || simulation->planet_colors_buffer == 0 ||
         simulation->particles_buffer == 0) {
-        fprintf(stderr, "gpu: unable to create shader buffers; using the CPU simulation\n");
+        fprintf(stderr, "gpu: unable to create shader buffers; GPU simulation cannot start\n");
         destroy_buffers(simulation);
         UnloadShader(simulation->render_shader);
         rlUnloadShaderProgram(simulation->compute_program);
@@ -227,7 +230,7 @@ GpuSimulation *gpu_simulation_create(const Planet *planet_list, int planet_count
     return simulation;
 }
 
-void gpu_simulation_step(GpuSimulation *simulation) {
+void gpu_simulation_step(GpuSimulation *simulation) {//effectue un pas de simulation en utilisant le shader de calcul
     if (simulation == NULL || !simulation->ready) {
         return;
     }
@@ -250,7 +253,7 @@ void gpu_simulation_step(GpuSimulation *simulation) {
     simulation->memory_barrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void gpu_simulation_draw(const GpuSimulation *simulation) {
+void gpu_simulation_draw(const GpuSimulation *simulation) {//dessine les particules en utilisant le shader de rendu
     if (simulation == NULL || !simulation->ready) {
         return;
     }
@@ -266,7 +269,7 @@ void gpu_simulation_draw(const GpuSimulation *simulation) {
     EndShaderMode();
 }
 
-void gpu_simulation_destroy(GpuSimulation *simulation) {
+void gpu_simulation_destroy(GpuSimulation *simulation) {//libère les ressources allouées pour la simulation GPU
     if (simulation == NULL) {
         return;
     }

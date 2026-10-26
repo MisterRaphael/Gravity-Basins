@@ -8,24 +8,6 @@
 
 
 Planet *planets = NULL;
-ObjectInfo *objects = NULL;
-
-
-void init_object(double x, double y) {
-
-    objects = malloc(sizeof(ObjectInfo) * number_of_objects);
-    if (objects == NULL) {
-        fprintf(stderr, "corpus_creation: Failed to allocate objects\n");
-        return;
-    }
-
-    for (int i = 0; i < number_of_objects; i++) {
-        objects[i].x_position = x;
-        objects[i].y_position = y;
-    }
-    fprintf(stdout, "corpus_creation: %d planets initialized\n", number_of_planets);
-
-}
 
 
 void init_planet(void) {
@@ -97,11 +79,6 @@ void cleanup_corpus(void) {
     if (planets != NULL) {
         free(planets);planets = NULL;
     }
-    if (objects != NULL) {
-        free(objects);
-        objects = NULL;
-    }
-    
     fprintf(stdout, "corpus_creation: Cleanup completed\n");
 }
 

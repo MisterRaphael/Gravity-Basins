@@ -9,10 +9,8 @@ typedef struct {
     int window_height;
     int fps;
 
-    // Corpus / Objets / Planètes
-    int number_of_objects;
+    // Planètes
     int number_of_planets;
-    double radius_object;
     double radius_planet;
     bool random_planets;
 
@@ -25,10 +23,7 @@ typedef struct {
     double capturation_tolerance_kinetic_energy;
     double capturation_tolerance_position_difference;
 
-    // Vitesse de simulation et rendu
-    int sub_steps;
-    int sim_steps_per_frame;
-    int texture_update_steps;
+    // Simulation GPU
     int gpu_steps_per_dispatch;
 } Config;
 
