@@ -96,7 +96,11 @@ static void draw_gpu_scene(GpuSimulation *simulation) {
 }
 
 void draw_main(void) {
-    init_random_planet();
+    if (RANDOM_PLANETS) {
+        init_random_planet();
+    } else {
+        init_planet();
+    }
 
     GpuSimulation *gpu_simulation =
             gpu_simulation_create(planets, number_of_planets);

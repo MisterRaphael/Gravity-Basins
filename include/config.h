@@ -14,6 +14,7 @@ typedef struct {
     int number_of_planets;
     double radius_object;
     double radius_planet;
+    bool random_planets;
 
     // Physique
     double g;

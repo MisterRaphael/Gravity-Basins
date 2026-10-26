@@ -58,6 +58,7 @@ static double eval_variable(const Config *cfg, const char *var, bool *ok) {
     if (ci_strcmp(var, "RADIUS_OBJECT") == 0) return cfg->radius_object;
     if (ci_strcmp(var, "G") == 0 || ci_strcmp(var, "gravity") == 0) return cfg->g;
     if (ci_strcmp(var, "FRICTION_COEFF") == 0 || ci_strcmp(var, "friction") == 0 || ci_strcmp(var, "f") == 0) return cfg->friction_coeff;
+    if (ci_strcmp(var, "RANDOM_PLANETS") == 0 || ci_strcmp(var, "random_planets") == 0) return cfg->random_planets ? 1.0 : 0.0;
     if (ci_strcmp(var, "SUB_STEPS") == 0 || ci_strcmp(var, "sub_steps") == 0) return (double)cfg->sub_steps;
     if (ci_strcmp(var, "SOFTENING_SQ") == 0 || ci_strcmp(var, "softening") == 0) return cfg->softening_sq;
     if (ci_strcmp(var, "CAPTURATION_TOLERANCE_KINETIC_ENERGY") == 0) return cfg->capturation_tolerance_kinetic_energy;
@@ -213,6 +214,7 @@ void config_init_defaults(Config *cfg) {
 
     cfg->number_of_objects = 1;
     cfg->number_of_planets = 3;
+    cfg->random_planets = true;
     cfg->radius_object = (double)cfg->window_height / 85.0;
     cfg->radius_planet = (double)cfg->window_width / 70.0;
 
@@ -244,6 +246,14 @@ static void apply_key_value(Config *cfg, const char *key, const char *val) {
         cfg->fps = (int)parse_config_value(cfg, val, cfg->fps);
     } else if (ci_strcmp(key, "NUMBER_OF_PLANETS") == 0 || ci_strcmp(key, "planets") == 0) {
         cfg->number_of_planets = (int)parse_config_value(cfg, val, cfg->number_of_planets);
+    } else if (ci_strcmp(key, "RANDOM_PLANETS") == 0 || ci_strcmp(key, "random_planets") == 0 || ci_strcmp(key, "random") == 0) {
+        if (ci_strcmp(val, "true") == 0 || ci_strcmp(val, "yes") == 0 || ci_strcmp(val, "oui") == 0 || strcmp(val, "1") == 0) {
+            cfg->random_planets = true;
+        } else if (ci_strcmp(val, "false") == 0 || ci_strcmp(val, "no") == 0 || ci_strcmp(val, "non") == 0 || strcmp(val, "0") == 0) {
+            cfg->random_planets = false;
+        } else {
+            cfg->random_planets = (parse_config_value(cfg, val, 1.0) != 0.0);
+        }
     } else if (ci_strcmp(key, "NUMBER_OF_OBJECTS") == 0 || ci_strcmp(key, "objects") == 0) {
         cfg->number_of_objects = (int)parse_config_value(cfg, val, cfg->number_of_objects);
     } else if (ci_strcmp(key, "RADIUS_PLANET") == 0) {
@@ -330,6 +340,8 @@ static void print_usage(const char *prog_name) {
     printf("  -g, --g <valeur>           Constante gravitationnelle G (défaut: 100000)\n");
     printf("  -f, --friction <valeur>    Coefficient de frottement (défaut: 0.1)\n");
     printf("  -p, --planets <nombre>     Nombre de planètes (défaut: 3)\n");
+    printf("  --random                   Place les planètes aléatoirement (défaut: activé)\n");
+    printf("  --no-random                Place les planètes de manière régulière sur un cercle\n");
     printf("  -s, --sub-steps <nombre>   Sous-pas de physique par calcul (défaut: 1000)\n");
     printf("  -m, --sim-steps <nombre>   Itérations de physique par frame (défaut: 5000)\n");
     printf("  -u, --gpu-steps <nombre>   Sous-pas GPU par frame (défaut: 16)\n");
@@ -355,6 +367,10 @@ bool config_parse_cli(Config *cfg, int argc, char **argv) {
             cfg->friction_coeff = atof(argv[++i]);
         } else if ((strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--planets") == 0) && i + 1 < argc) {
             cfg->number_of_planets = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--random") == 0) {
+            cfg->random_planets = true;
+        } else if (strcmp(argv[i], "--no-random") == 0) {
+            cfg->random_planets = false;
         } else if ((strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--sub-steps") == 0) && i + 1 < argc) {
             cfg->sub_steps = atoi(argv[++i]);
         } else if ((strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--sim-steps") == 0) && i + 1 < argc) {
@@ -383,7 +399,8 @@ void config_print(const Config *cfg) {
 
     printf("\n================ Configuration Gravity Basins ================\n");
     printf("  Fenêtre           : %d x %d (%d FPS)\n", cfg->window_width, cfg->window_height, cfg->fps);
-    printf("  Planètes          : %d (rayon: %.1f px)\n", cfg->number_of_planets, cfg->radius_planet);
+    printf("  Planètes          : %d (rayon: %.1f px, aléatoires: %s)\n",
+           cfg->number_of_planets, cfg->radius_planet, cfg->random_planets ? "oui" : "non");
     printf("  Objets            : %d (rayon: %.1f px)\n", cfg->number_of_objects, cfg->radius_object);
     printf("  Constante G       : %.1f\n", cfg->g);
     printf("  Frottement        : %.4f\n", cfg->friction_coeff);

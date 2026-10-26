@@ -40,7 +40,7 @@ FetchContent_MakeAvailable(raylib)
 target_link_libraries(Gravity_Basins PRIVATE raylib m)
 
 # Les shaders sont accessibles depuis le répertoire de build, qui est le répertoire
-# de travail par défaut des configurations CMake de CLion. Cette cible est exécutée
+# de travail utilisé par les configurations de lancement CMake. Cette cible est exécutée
 # à chaque build afin de prendre en compte les modifications GLSL sans relinker le C.
 add_custom_target(copy_gravity_shaders ALL
         COMMAND ${CMAKE_COMMAND} -E make_directory

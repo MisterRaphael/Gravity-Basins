@@ -37,7 +37,7 @@ void init_planet(void) {
 
     int center_x = WINDOW_WIDTH / 2;
     int center_y = WINDOW_HEIGHT / 2;
-    int radius = 50;
+    int radius = WINDOW_WIDTH/8;
 
     for (int i = 0; i < number_of_planets; i++) {
         planets[i].id = i;

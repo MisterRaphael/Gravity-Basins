@@ -18,6 +18,7 @@
 // Planètes
 #define number_of_planets                         (g_config.number_of_planets)
 #define RADIUS_PLANET                             (g_config.radius_planet)
+#define RANDOM_PLANETS                            (g_config.random_planets)
 
 // Physique
 #define G                                         (g_config.g)
