@@ -1,6 +1,7 @@
 #ifndef UTIPE_CORPUS_CREATION_H
 #define UTIPE_CORPUS_CREATION_H
 
+#include <stdbool.h>
 #include "raylib.h"
 
 typedef struct {
@@ -12,8 +13,7 @@ typedef struct {
 
 extern Planet *planets;
 
-void init_planet(void);
-void init_random_planet(void);
+bool init_planets(void);
 void cleanup_corpus(void);
 
 #endif //UTIPE_CORPUS_CREATION_H

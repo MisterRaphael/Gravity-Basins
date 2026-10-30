@@ -2,6 +2,7 @@
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
+// Disposition partagée avec la structure GpuParticle en C.
 struct Particle {
     vec4 positionVelocity;
     uint state;
@@ -22,7 +23,7 @@ layout(std430, binding = 3) buffer Particles {
     Particle particles[];
 };
 
-uniform int width;
+uniform int width;//uniform : constantes accessibles depuis le shader
 uniform int height;
 uniform int planetCount;
 uniform int stepsPerDispatch;
@@ -37,6 +38,7 @@ const uint PARTICLE_ACTIVE = 1u;
 const uint PARTICLE_CAPTURED = 2u;
 
 void main() {
+    // Une invocation GPU traite le pixel correspondant.
     uvec2 pixel = gl_GlobalInvocationID.xy;
     if (pixel.x >= uint(width) || pixel.y >= uint(height)) {
         return;
@@ -51,6 +53,7 @@ void main() {
     vec2 position = particle.positionVelocity.xy;
     vec2 velocity = particle.positionVelocity.zw;
 
+    // Intègre le mouvement et additionne l'attraction de chaque planète.
     for (int step = 0; step < stepsPerDispatch; step++) {
         vec2 acceleration = vec2(0.0);
         for (int planet = 0; planet < planetCount; planet++) {
@@ -68,11 +71,12 @@ void main() {
 
     particle.positionVelocity = vec4(position, velocity);
 
+    // Capture la particule si elle est lente et proche d'une planète.
     float kineticEnergy = 0.5 * dot(velocity, velocity);
     if (kineticEnergy <= captureEnergy) {
         for (int planet = 0; planet < planetCount; planet++) {
-            vec2 difference = abs(position - planetPositions[planet].xy);
-            if (difference.x <= captureDistance && difference.y <= captureDistance) {
+            vec2 difference = position - planetPositions[planet].xy;
+            if (dot(difference, difference) <= captureDistance * captureDistance) {
                 particle.state = PARTICLE_CAPTURED;
                 particle.color = planetColors[planet];
                 break;

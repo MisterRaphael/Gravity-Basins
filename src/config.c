@@ -30,6 +30,61 @@ static int ci_strcmp(const char *s1, const char *s2) {
     return (unsigned char)*s1 - (unsigned char)*s2;
 }
 
+static const char *planet_layout_name(PlanetLayout layout) {
+    switch (layout) {
+        case PLANET_LAYOUT_RANDOM: return "random";
+        case PLANET_LAYOUT_CIRCLE: return "circle";
+        case PLANET_LAYOUT_SAVED: return "saved";
+        default: return "unknown";
+    }
+}
+
+static bool parse_planet_layout(const char *value, PlanetLayout *layout) {
+    if (ci_strcmp(value, "random") == 0) {
+        *layout = PLANET_LAYOUT_RANDOM;
+    } else if (ci_strcmp(value, "circle") == 0) {
+        *layout = PLANET_LAYOUT_CIRCLE;
+    } else if (ci_strcmp(value, "saved") == 0) {
+        *layout = PLANET_LAYOUT_SAVED;
+    } else {
+        return false;
+    }
+    return true;
+}
+
+static bool resolve_planet_layout_file(Config *cfg, const char *config_path) {
+    if (cfg->planet_layout_file_resolved || cfg->planet_layout_file[0] == '\0') {
+        return true;
+    }
+
+    const char *path = cfg->planet_layout_file;
+    const bool absolute = path[0] == '/' || path[0] == '\\' ||
+                          (strlen(path) > 1 && path[1] == ':');
+    if (absolute) {
+        cfg->planet_layout_file_resolved = true;
+        return true;
+    }
+
+    const char *separator = strrchr(config_path, '/');
+    if (separator == NULL) {
+        cfg->planet_layout_file_resolved = true;
+        return true;
+    }
+
+    const size_t directory_length = (size_t)(separator - config_path) + 1;
+    char resolved_path[sizeof(cfg->planet_layout_file)];
+    const int written = snprintf(resolved_path, sizeof(resolved_path), "%.*s%s",
+                                 (int)directory_length, config_path, path);
+    if (written < 0 || (size_t)written >= sizeof(resolved_path)) {
+        fprintf(stderr, "[config] Chemin du fichier de disposition trop long\n");
+        return false;
+    }
+
+    memcpy(cfg->planet_layout_file, resolved_path, (size_t)written + 1);
+    cfg->planet_layout_file_resolved = true;
+    return true;
+}
+
 /* ========================================================================= */
 /* Évaluateur d'expressions arithmétiques récursif descendant                */
 /* Supporte : +, -, *, /, ^ (ou **), parenthèses, et variables de Config     */
@@ -56,7 +111,7 @@ static double eval_variable(const Config *cfg, const char *var, bool *ok) {
     if (ci_strcmp(var, "RADIUS_PLANET") == 0) return cfg->radius_planet;
     if (ci_strcmp(var, "G") == 0 || ci_strcmp(var, "gravity") == 0) return cfg->g;
     if (ci_strcmp(var, "FRICTION_COEFF") == 0 || ci_strcmp(var, "friction") == 0 || ci_strcmp(var, "f") == 0) return cfg->friction_coeff;
-    if (ci_strcmp(var, "RANDOM_PLANETS") == 0 || ci_strcmp(var, "random_planets") == 0) return cfg->random_planets ? 1.0 : 0.0;
+    if (ci_strcmp(var, "RANDOM_PLANETS") == 0 || ci_strcmp(var, "random_planets") == 0) return cfg->planet_layout == PLANET_LAYOUT_RANDOM ? 1.0 : 0.0;
     if (ci_strcmp(var, "SOFTENING_SQ") == 0 || ci_strcmp(var, "softening") == 0) return cfg->softening_sq;
     if (ci_strcmp(var, "CAPTURATION_TOLERANCE_KINETIC_ENERGY") == 0) return cfg->capturation_tolerance_kinetic_energy;
     if (ci_strcmp(var, "CAPTURATION_TOLERANCE_POSITION_DIFFERENCE") == 0) return cfg->capturation_tolerance_position_difference;
@@ -208,7 +263,10 @@ void config_init_defaults(Config *cfg) {
     cfg->fps = 60;
 
     cfg->number_of_planets = 3;
-    cfg->random_planets = true;
+    cfg->planet_layout = PLANET_LAYOUT_RANDOM;
+    snprintf(cfg->planet_layout_file, sizeof(cfg->planet_layout_file),
+             "configs/planet_layouts/current.txt");
+    cfg->planet_layout_file_resolved = true;
     cfg->radius_planet = (double)cfg->window_width / 70.0;
 
     cfg->g = 100000.0;
@@ -233,13 +291,29 @@ static void apply_key_value(Config *cfg, const char *key, const char *val) {
         cfg->fps = (int)parse_config_value(cfg, val, cfg->fps);
     } else if (ci_strcmp(key, "NUMBER_OF_PLANETS") == 0 || ci_strcmp(key, "planets") == 0) {
         cfg->number_of_planets = (int)parse_config_value(cfg, val, cfg->number_of_planets);
+    } else if (ci_strcmp(key, "PLANET_LAYOUT") == 0 || ci_strcmp(key, "planet_layout") == 0) {
+        PlanetLayout layout;
+        if (parse_planet_layout(val, &layout)) {
+            cfg->planet_layout = layout;
+        } else {
+            fprintf(stderr, "[config] Disposition inconnue '%s' (random, circle ou saved)\n", val);
+        }
+    } else if (ci_strcmp(key, "PLANET_LAYOUT_FILE") == 0 || ci_strcmp(key, "planet_layout_file") == 0) {
+        if (strlen(val) >= sizeof(cfg->planet_layout_file)) {
+            fprintf(stderr, "[config] Chemin du fichier de disposition trop long\n");
+            cfg->planet_layout_file[0] = '\0';
+        } else {
+            snprintf(cfg->planet_layout_file, sizeof(cfg->planet_layout_file), "%s", val);
+            cfg->planet_layout_file_resolved = false;
+        }
     } else if (ci_strcmp(key, "RANDOM_PLANETS") == 0 || ci_strcmp(key, "random_planets") == 0 || ci_strcmp(key, "random") == 0) {
         if (ci_strcmp(val, "true") == 0 || ci_strcmp(val, "yes") == 0 || ci_strcmp(val, "oui") == 0 || strcmp(val, "1") == 0) {
-            cfg->random_planets = true;
+            cfg->planet_layout = PLANET_LAYOUT_RANDOM;
         } else if (ci_strcmp(val, "false") == 0 || ci_strcmp(val, "no") == 0 || ci_strcmp(val, "non") == 0 || strcmp(val, "0") == 0) {
-            cfg->random_planets = false;
+            cfg->planet_layout = PLANET_LAYOUT_CIRCLE;
         } else {
-            cfg->random_planets = (parse_config_value(cfg, val, 1.0) != 0.0);
+            cfg->planet_layout = parse_config_value(cfg, val, 1.0) != 0.0
+                    ? PLANET_LAYOUT_RANDOM : PLANET_LAYOUT_CIRCLE;
         }
     } else if (ci_strcmp(key, "RADIUS_PLANET") == 0) {
         cfg->radius_planet = parse_config_value(cfg, val, cfg->radius_planet);
@@ -305,6 +379,9 @@ bool config_load_from_file(Config *cfg, const char *filepath) {
     }
 
     fclose(f);
+    if (!resolve_planet_layout_file(cfg, filepath)) {
+        return false;
+    }
     fprintf(stdout, "[config] Configuration chargée avec succès depuis '%s'\n", filepath);
     return true;
 }
@@ -319,6 +396,8 @@ static void print_usage(const char *prog_name) {
     printf("  -p, --planets <nombre>     Nombre de planètes (défaut: 3)\n");
     printf("  --random                   Place les planètes aléatoirement (défaut: activé)\n");
     printf("  --no-random                Place les planètes de manière régulière sur un cercle\n");
+    printf("  --layout <mode>            Disposition: random, circle ou saved\n");
+    printf("  --layout-file <fichier>    Fichier de coordonnées pour le mode saved\n");
     printf("  -u, --gpu-steps <nombre>   Sous-pas GPU par frame (défaut: 16)\n");
     printf("  -w, --width <pixels>       Largeur de la fenêtre (défaut: 1700)\n\n");
     printf("Exemples:\n");
@@ -343,9 +422,24 @@ bool config_parse_cli(Config *cfg, int argc, char **argv) {
         } else if ((strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--planets") == 0) && i + 1 < argc) {
             cfg->number_of_planets = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--random") == 0) {
-            cfg->random_planets = true;
+            cfg->planet_layout = PLANET_LAYOUT_RANDOM;
         } else if (strcmp(argv[i], "--no-random") == 0) {
-            cfg->random_planets = false;
+            cfg->planet_layout = PLANET_LAYOUT_CIRCLE;
+        } else if ((strcmp(argv[i], "--layout") == 0 || strcmp(argv[i], "--planet-layout") == 0) && i + 1 < argc) {
+            PlanetLayout layout;
+            if (parse_planet_layout(argv[++i], &layout)) {
+                cfg->planet_layout = layout;
+            } else {
+                fprintf(stderr, "[config] Disposition inconnue '%s' (random, circle ou saved)\n", argv[i]);
+            }
+        } else if ((strcmp(argv[i], "--layout-file") == 0 || strcmp(argv[i], "--planet-layout-file") == 0) && i + 1 < argc) {
+            const char *path = argv[++i];
+            if (strlen(path) >= sizeof(cfg->planet_layout_file)) {
+                fprintf(stderr, "[config] Chemin du fichier de disposition trop long\n");
+            } else {
+                snprintf(cfg->planet_layout_file, sizeof(cfg->planet_layout_file), "%s", path);
+                cfg->planet_layout_file_resolved = true;
+            }
         } else if ((strcmp(argv[i], "-u") == 0 || strcmp(argv[i], "--gpu-steps") == 0) && i + 1 < argc) {
             cfg->gpu_steps_per_dispatch = atoi(argv[++i]);
         } else if ((strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "--width") == 0) && i + 1 < argc) {
@@ -368,8 +462,9 @@ void config_print(const Config *cfg) {
 
     printf("\n================ Configuration Gravity Basins ================\n");
     printf("  Fenêtre           : %d x %d (%d FPS)\n", cfg->window_width, cfg->window_height, cfg->fps);
-    printf("  Planètes          : %d (rayon: %.1f px, aléatoires: %s)\n",
-           cfg->number_of_planets, cfg->radius_planet, cfg->random_planets ? "oui" : "non");
+    printf("  Planètes          : %d (rayon: %.1f px, disposition: %s)\n",
+           cfg->number_of_planets, cfg->radius_planet, planet_layout_name(cfg->planet_layout));
+    printf("  Fichier disposition: %s\n", cfg->planet_layout_file);
     printf("  Constante G       : %.1f\n", cfg->g);
     printf("  Frottement        : %.4f\n", cfg->friction_coeff);
     printf("  Softening Sq      : %.1f\n", cfg->softening_sq);

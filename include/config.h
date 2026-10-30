@@ -3,6 +3,12 @@
 
 #include <stdbool.h>
 
+typedef enum {
+    PLANET_LAYOUT_RANDOM,
+    PLANET_LAYOUT_CIRCLE,
+    PLANET_LAYOUT_SAVED
+} PlanetLayout;
+
 typedef struct {
     // Fenêtre
     int window_width;
@@ -12,7 +18,9 @@ typedef struct {
     // Planètes
     int number_of_planets;
     double radius_planet;
-    bool random_planets;
+    PlanetLayout planet_layout;
+    char planet_layout_file[512];
+    bool planet_layout_file_resolved;
 
     // Physique
     double g;

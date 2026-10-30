@@ -24,10 +24,9 @@ static void draw_gpu_scene(GpuSimulation *simulation) {
 }
 
 void draw_main(void) {
-    if (RANDOM_PLANETS) {
-        init_random_planet();
-    } else {
-        init_planet();
+    if (!init_planets()) {
+        cleanup_corpus();
+        return;
     }
 
     GpuSimulation *gpu_simulation =

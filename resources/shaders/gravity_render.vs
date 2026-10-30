@@ -10,5 +10,6 @@ out vec2 fragTexCoord;
 
 void main() {
     fragTexCoord = vertexTexCoord;
+    // Transforme le sommet pour l'afficher à l'écran.
     gl_Position = mvp * vec4(vertexPosition, 1.0);
 }
